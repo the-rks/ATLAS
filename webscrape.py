@@ -1,50 +1,72 @@
-import csv
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TypedDict
+from textwrap import indent
+from typing import TextIO, TypedDict
 
+import requests
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 from googlesearch import search
 from tqdm import tqdm
 
 
+def setup_env():
+    load_dotenv()
+    # check if certain envs exist and prompt user if not, saving it to .env
+
+
 class SearchArg(TypedDict):
     name: str
-    from_date: datetime.date  # inclusive
-    to_date: datetime.date  # inclusive
+    from_date: datetime.date
+    to_date: datetime.date
     date_range: int  # will grab news on dates [from_date:to_date:date_range]
 
 
-def get_news_links(company, start_date, end_date, max_results=10):
-    # Restrict search to free sources
-    query = (
-        f"{company} stock news after:{start_date} before:{end_date} "
-        f"site:finance.yahoo.com OR site:investing.com OR site:seekingalpha.com"
-    )
-    news_links = []
-
-    for url in search(query, num_results=max_results):
-        if any(
-            domain in url
-            for domain in ["yahoo.com", "investing.com", "seekingalpha.com"]
-        ):
-            news_links.append(url)
-
-    return news_links
+AREAS = [
+    {"name": "title"},
+    {"name": "div", "class_": "ArticleBody-articleBody"},
+    {"name": "div", "class_": "atoms-wrapper"},
+    {"name": "div", "class_": "article-body"},
+]
 
 
-def process_link(link: str) -> str | None:
-    pass
+def process_link(url: str) -> str | None:
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, headers=headers, timeout=1.5)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # extract content
+        content = (
+            " ".join(
+                " ".join(
+                    elem.get_text(separator=" ", strip=True)
+                    for elem in soup.find_all(**area)
+                )
+                for area in AREAS
+                if soup.find(**area)
+            )
+            .strip()
+            .lower()
+        )
+
+        return content
+    except Exception as e:
+        print(f"Error scraping {url}: {e}")
+        return None
 
 
 def gather_stocknews(
-    name: str, from_date: datetime.date, to_date: datetime.date, writer: csv.writer
+    name: str, from_date: datetime.date, to_date: datetime.date, outfile: TextIO
 ):
     filters = f"after:{from_date} before:{to_date} "
     queries = [
-        f"site:finance.yahoo.com {name} stock article",
-        f'site:cnbc.com {name} + "published"',
-        f'site:reuters.com {name} + "Suggested Topics"',
+        f'site:finance.yahoo.com {name} + "in this article"',
+        # f'site:cnbc.com {name} + "in this article"',  # rate limited
+        # f'site:reuters.com {name} + "Suggested Topics"',  # paywall
         f"site:fool.com {name}",
     ]
 
@@ -53,19 +75,23 @@ def gather_stocknews(
         result = search(f"{query} {filters}", num_results=2)
 
         for link in result:
+            if not link:
+                continue
             site_data = process_link(link)
             if site_data is not None:
                 stock_texts.append(site_data)
 
-    text_lists = json.dumps(stock_texts)
-    writer.writerows([str(from_date), name, text_lists])
+    writedata = json.dumps(
+        {"name": name, "date": str(from_date), "text": stock_texts}, indent=2
+    )
+    writedata = indent(writedata, "  ") + ",\n"
+    outfile.write(writedata)
 
 
 def gather_news(search_args: list[SearchArg], output: Path = Path("output.csv")):
     print(f"Starting search. Output in {output}")
     with open(output, "w", newline="") as outfile:
-        writer = csv.writer(outfile)
-        writer.writerow(["date", "name", "text_list"])
+        outfile.write("[\n")
 
         for arg in search_args:
             name = arg["name"]
@@ -77,8 +103,10 @@ def gather_news(search_args: list[SearchArg], output: Path = Path("output.csv"))
             print(f"Gathering news for {name} from {from_date} to {to_date}")
             n_iter = (to_date - from_date) // date_incr
             for _ in tqdm(range(n_iter), unit="interval"):
-                gather_stocknews(name, from_date, from_date + date_incr, writer)
+                gather_stocknews(name, from_date, from_date + date_incr, outfile)
                 from_date += date_incr
+
+        outfile.write("]\n")
 
 
 def date(datestr: str) -> datetime.date:
@@ -157,4 +185,5 @@ if __name__ == "__main__":
         },
     ]
 
+    setup_env()
     gather_news(search_args, Path("Data/stocknews.csv"))
