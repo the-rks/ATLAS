@@ -1,5 +1,6 @@
 Data/analyst_ratings_processed.csv
 Data/*.zip
+models/glove-*
 
 
 
