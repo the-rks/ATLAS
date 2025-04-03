@@ -1,7 +1,9 @@
 gensim==4.3.3
-#googlesearch-python==1.3.0
 matplotlib==3.10.1
+nltk==3.9.1
 pandas==2.2.3
 python-dotenv==1.1.0
 scikit-learn==1.6.1
+# torch==2.6.0+cu124  # please modify this to fit your system
+transformers==4.50.3
 tqdm==4.67.1
