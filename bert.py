@@ -75,7 +75,7 @@ class BertClassifier(nn.Module):
         # use [CLS] token embedding
         # embedding = bert_output[:, 0, :]
 
-        # # use mean pooling of non-mask layers
+        # use mean pooling of non-mask layers
         mask = attention_mask.unsqueeze(-1).expand(bert_output.size()).float()
         embedding = torch.sum(bert_output * mask, 1) / mask.sum(1)
 
