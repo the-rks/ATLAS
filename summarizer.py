@@ -7,7 +7,7 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 import numpy as np
 
-def get_summary(docs_list, k):
+def get_summary_tfidf(docs_list, k):
     """
     Returns summary of input documents.
     Summary is computed by choosing the top k sentences based on aggregated tf-idf values. 
@@ -42,4 +42,4 @@ def get_summary(docs_list, k):
 
 if __name__ == "__main__":
     test_docs = ["This is the first test sentence. Here there's a second test sent.", "Second item in thet list. Last sentence for testing."]
-    print(get_summary(test_docs, 2))
+    print(get_summary_tfidf(test_docs, 2))
