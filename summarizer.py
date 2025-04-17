@@ -21,6 +21,12 @@ def get_summary_tfidf(docs_list, k):
         curr_sents = sent_tokenize(doc)
         sent_list += curr_sents
 
+    if len(sent_list) <= k:
+        summary = ""
+        for i in range (len(sent_list)):
+            summary += sent_list[i] + " "
+        summary.strip()
+        return summary
     # Generate tf-idf values
     stop = list(stopwords.words('english'))
     vectorizer = TfidfVectorizer(stop_words=stop)
@@ -41,5 +47,5 @@ def get_summary_tfidf(docs_list, k):
 
 
 if __name__ == "__main__":
-    test_docs = ["This is the first test sentence. Here there's a second test sent.", "Second item in thet list. Last sentence for testing."]
-    print(get_summary_tfidf(test_docs, 2))
+    test_docs = ["This is the first test sentence. Here there's a second test sent. Second item in thet list. Last sentence for testing."]
+    print(get_summary_tfidf(test_docs, 5))

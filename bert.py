@@ -39,6 +39,34 @@ class BertDataset(Dataset):
     def __getitem__(self, idx):
         return self.data[idx]
 
+class BertDatasetArticles(Dataset):
+    """Dataset for Bert fine-tuning"""
+
+    def __init__(self, data: pd.DataFrame, tokenizer: transformers.AutoTokenizer):
+        super().__init__()
+
+        self.data = []
+
+        self.tokenizer = tokenizer
+        for row in data.iterrows():
+            delta = row[1]["delta_week"]
+            title = row[1]['Article_title']
+            summary = row[1]['Summary']
+            if title[-1] != '.':
+                title += '.'
+            title_summ = title + ' ' + summary # Concat title and summary to use for prediction
+            tokens = tokenizer.tokenize(title_summ)
+            if len(tokens) > 510:
+                tokens = tokens[:510]
+            tokens_final = ["[CLS]"] + tokens + ["[SEP]"]
+            token_ids = tokenizer.convert_tokens_to_ids(tokens_final)
+            self.data.append({"token_ids": token_ids, "delta": delta})
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
 
 def basic_collate_fn(batch):
     """Collate function for setting."""
