@@ -130,10 +130,9 @@ def get_optimizer(net, lr, weight_decay):
 
 
 def get_hyper_parameters():
-    hidden_dim = [600, 800]
-    lr = [1e-4, 1e-3]
-    weight_decay = [0, 0.001]
-    return hidden_dim, lr, weight_decay
+    lr = [1e-4, 5e-4, 1e-3]
+    weight_decay = [0, 1e-4, 1e-3]
+    return lr, weight_decay
 
 
 def train_model(
